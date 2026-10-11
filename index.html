@@ -17,7 +17,11 @@
       <h1>PeerBump</h1>
     </header>
 
-    <article>
+    <article id="profile-card">
+      <div id="guest-banner" style="display: none; margin-bottom: 1rem;">
+        <ins>Connected to room: <strong id="guest-room-id"></strong></ins>
+      </div>
+
       <form id="profile-form" novalidate>
         <label for="name">
           Name <span aria-hidden="true" style="color: var(--pico-primary);">*</span>
@@ -37,8 +41,44 @@
 
         <hr>
 
-        <button type="submit">Save Profile</button>
+        <button type="submit" class="outline" style="margin-bottom: 0.5rem;">Save Profile</button>
       </form>
+
+      <div id="room-actions">
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="button" id="btn-host" style="flex: 1; margin-bottom: 0;">Host Room</button>
+          <button type="button" class="outline" id="btn-join-toggle" style="flex: 1; margin-bottom: 0;">Join Room</button>
+        </div>
+        <div id="join-manual" style="display: none; margin-top: 0.5rem;">
+          <fieldset role="group" style="margin-bottom: 0;">
+            <input type="text" id="manual-room-input" placeholder="Room code">
+            <button type="button" id="btn-manual-join">Join</button>
+          </fieldset>
+        </div>
+      </div>
+
+      <div id="guest-actions" style="display: none;">
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="button" id="btn-send-contact" style="flex: 1; margin-bottom: 0;">Send Contact</button>
+          <button type="button" class="outline secondary" id="btn-leave-room" style="flex: 1; margin-bottom: 0;">Leave</button>
+        </div>
+      </div>
+    </article>
+
+    <article id="host-view" style="display: none; text-align: center;">
+      <header>
+        <h2>Room: <span id="host-room-id"></span></h2>
+      </header>
+
+      <div style="background: #ffffff; padding: 1rem; border-radius: 8px; display: inline-block; margin: 0 auto;">
+        <div id="qrcode"></div>
+      </div>
+
+      <p style="margin-top: 1rem;"><small id="host-link-text"></small></p>
+
+      <hr>
+
+      <button type="button" class="outline secondary" id="btn-close-room">Close Room</button>
     </article>
   </main>
 </body>
