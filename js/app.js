@@ -7,22 +7,51 @@ const AVAILABLE_FIELDS = [
   { id: 'drink', label: 'Favorite drink', icon: 'bi bi-cup-straw', type: 'text', autocomplete: 'off', placeholder: 'e.g. Gin Tonic' },
 ];
 
-let activeFields = [
+const STORAGE_KEY = 'peerbump_profile';
+
+function loadProfile() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return null;
+}
+
+const savedData = loadProfile();
+
+let activeFields = savedData?.activeFields || [
   { id: 'phone', value: '' },
   { id: 'instagram', value: '' },
 ];
 
-let inactiveFields = [];
+let inactiveFields = savedData?.inactiveFields || [];
 
+const nameInput = document.getElementById('name');
 const activeContainer = document.getElementById('active-fields');
 const inactiveContainer = document.getElementById('inactive-fields');
 const fieldSelector = document.getElementById('field-selector');
+const profileForm = document.getElementById('profile-form');
+
+if (savedData?.name) {
+  nameInput.value = savedData.name;
+}
+
+function saveProfile() {
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({
+      name: nameInput.value,
+      activeFields,
+      inactiveFields,
+    })
+  );
+}
 
 function getFieldMeta(id) {
   return AVAILABLE_FIELDS.find(f => f.id === id) || {
     id,
     label: id,
-    icon: '',
+    icon: 'bi bi-tag',
     type: 'text',
     placeholder: '',
   };
@@ -35,24 +64,13 @@ function render() {
           if (field.isCustom) {
             return `
               <div>
-                <fieldset role="group" style="margin-bottom: 0.5rem;">
-                  <input 
-                    type="text" 
-                    maxlength="2" 
-                    data-type="custom-icon" 
-                    data-index="${index}" 
-                    value="${field.icon || '✏️'}" 
-                    style="max-width: 4rem; text-align: center; font-size: 1.1rem; padding: 0.5rem;"
-                    title="Tap to change emoji"
-                  >
-                  <input 
-                    type="text" 
-                    data-type="custom-label" 
-                    data-index="${index}" 
-                    value="${field.label}" 
-                    placeholder="Field name (e.g. Discord)"
-                  >
-                </fieldset>
+                <input 
+                  type="text" 
+                  data-type="custom-label" 
+                  data-index="${index}" 
+                  value="${field.label}" 
+                  placeholder="Field name (e.g. Discord)"
+                >
                 <fieldset role="group">
                   <input 
                     type="text" 
@@ -94,7 +112,7 @@ function render() {
           if (field.isCustom) {
             return `
               <div>
-                <label>${field.icon || '✏️'} ${field.label || 'Custom field'}</label>
+                <label><i class="bi bi-tag" style="margin-right: 0.4rem;"></i>${field.label || 'Custom field'}</label>
                 <fieldset role="group">
                   <input 
                     type="text" 
@@ -144,13 +162,12 @@ function render() {
   `;
 }
 
+
 activeContainer.addEventListener('input', e => {
   const index = e.target.dataset.index;
   if (index === undefined) return;
 
-  if (e.target.dataset.type === 'custom-icon') {
-    activeFields[index].icon = e.target.value;
-  } else if (e.target.dataset.type === 'custom-label') {
+  if (e.target.dataset.type === 'custom-label') {
     activeFields[index].label = e.target.value;
   } else if (e.target.dataset.type === 'custom-value') {
     activeFields[index].value = e.target.value;
@@ -164,8 +181,6 @@ inactiveContainer.addEventListener('input', e => {
   if (index === undefined) return;
 
   if (e.target.dataset.type === 'custom-value') {
-    inactiveFields[index].value = e.target.value;
-  } else {
     inactiveFields[index].value = e.target.value;
   }
 });
@@ -206,7 +221,6 @@ fieldSelector.addEventListener('change', e => {
     activeFields.push({
       id: 'custom_' + Date.now(),
       label: '',
-      icon: '✏️',
       value: '',
       isCustom: true,
     });
@@ -223,6 +237,21 @@ fieldSelector.addEventListener('change', e => {
   }
 
   render();
+});
+
+profileForm.addEventListener('submit', e => {
+  e.preventDefault();
+  saveProfile();
+
+  const btn = profileForm.querySelector('button[type="submit"]');
+  const original = btn.textContent;
+  btn.textContent = 'Saved!';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    btn.textContent = original;
+    btn.disabled = false;
+  }, 1000);
 });
 
 render();
