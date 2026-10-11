@@ -19,7 +19,7 @@
 
     <article id="profile-card">
       <div id="guest-banner" style="display: none; margin-bottom: 1rem;">
-        <ins>Room: <strong id="guest-room-id"></strong></ins>
+        <ins id="guest-room-label">Room: <strong id="guest-room-id"></strong></ins>
         <div><small id="guest-status">Connecting to host...</small></div>
       </div>
 
@@ -87,6 +87,18 @@
       <hr>
 
       <button type="button" class="outline secondary" id="btn-close-room">Close Room</button>
+    </article>
+
+    <article id="results-view" style="display: none;">
+      <header>
+        <h2>Contacts (<span id="results-count">0</span>)</h2>
+      </header>
+
+      <div id="results-list"></div>
+
+      <hr>
+
+      <button type="button" class="outline secondary" id="btn-results-done">Done</button>
     </article>
   </main>
 </body>
