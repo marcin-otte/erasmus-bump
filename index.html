@@ -3,24 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Erasmus Bump</title>
-
-  <!-- Pico.css -->
+  <title>PeerBump</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-
-  <!-- PeerJS -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-
-  <!-- qrcode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-  <!-- Custom Styles & Scripts -->
   <link rel="stylesheet" href="css/style.css">
   <script src="js/app.js" defer></script>
 </head>
 <body>
   <main class="container">
-    <h1>Erasmus Bump</h1>
+    <header>
+      <h1>PeerBump</h1>
+    </header>
+
+    <article>
+      <form id="profile-form">
+        <label for="name">
+          Name <span aria-hidden="true" style="color: var(--pico-primary);">*</span>
+          <input type="text" id="name" name="name" placeholder="Your name" autocomplete="name" required>
+        </label>
+
+        <div id="active-fields"></div>
+
+        <select id="field-selector">
+          <option value="" disabled selected>+ Add field...</option>
+        </select>
+
+        <details id="saved-section">
+          <summary>Not shared</summary>
+          <div id="inactive-fields"></div>
+        </details>
+
+        <hr>
+
+        <button type="submit">Save Profile</button>
+      </form>
+    </article>
   </main>
 </body>
 </html>
