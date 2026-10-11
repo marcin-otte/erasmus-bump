@@ -254,4 +254,116 @@ profileForm.addEventListener('submit', e => {
   }, 1000);
 });
 
+const profileCard = document.getElementById('profile-card');
+const roomActions = document.getElementById('room-actions');
+const btnHost = document.getElementById('btn-host');
+const btnJoinToggle = document.getElementById('btn-join-toggle');
+const joinManual = document.getElementById('join-manual');
+const manualRoomInput = document.getElementById('manual-room-input');
+const btnManualJoin = document.getElementById('btn-manual-join');
+
+const guestBanner = document.getElementById('guest-banner');
+const guestRoomId = document.getElementById('guest-room-id');
+const guestActions = document.getElementById('guest-actions');
+const btnSendContact = document.getElementById('btn-send-contact');
+const btnLeaveRoom = document.getElementById('btn-leave-room');
+
+const hostView = document.getElementById('host-view');
+const hostRoomId = document.getElementById('host-room-id');
+const hostLinkText = document.getElementById('host-link-text');
+const qrCodeContainer = document.getElementById('qrcode');
+const btnCloseRoom = document.getElementById('btn-close-room');
+
+let currentRoomId = null;
+
+function generateRoomId() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+function enterHostMode(roomId) {
+  currentRoomId = roomId || generateRoomId();
+  profileCard.style.display = 'none';
+  hostView.style.display = 'block';
+  hostRoomId.textContent = currentRoomId;
+
+  const baseUrl = window.location.protocol === 'file:'
+    ? 'https://marcin-otte.github.io/erasmus-bump/'
+    : `${window.location.origin}${window.location.pathname}`;
+  const joinUrl = `${baseUrl.replace(/\/$/, '')}/?room=${currentRoomId}`;
+  hostLinkText.textContent = joinUrl;
+
+  qrCodeContainer.innerHTML = '';
+  new QRCode(qrCodeContainer, {
+    text: joinUrl,
+    width: 200,
+    height: 200,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M,
+  });
+}
+
+function closeHostMode() {
+  currentRoomId = null;
+  hostView.style.display = 'none';
+  profileCard.style.display = 'block';
+  qrCodeContainer.innerHTML = '';
+}
+
+function enterGuestMode(roomId) {
+  currentRoomId = roomId.trim().toUpperCase();
+  profileCard.style.display = 'block';
+  hostView.style.display = 'none';
+  guestBanner.style.display = 'block';
+  guestRoomId.textContent = currentRoomId;
+  roomActions.style.display = 'none';
+  guestActions.style.display = 'block';
+
+  const newUrl = `${window.location.origin}${window.location.pathname}?room=${currentRoomId}`;
+  window.history.replaceState({}, '', newUrl);
+}
+
+function leaveGuestMode() {
+  currentRoomId = null;
+  guestBanner.style.display = 'none';
+  guestActions.style.display = 'none';
+  roomActions.style.display = 'block';
+
+  const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+  window.history.replaceState({}, '', cleanUrl);
+}
+
+btnHost.addEventListener('click', () => enterHostMode());
+btnCloseRoom.addEventListener('click', closeHostMode);
+
+btnJoinToggle.addEventListener('click', () => {
+  joinManual.style.display = joinManual.style.display === 'none' ? 'block' : 'none';
+});
+
+btnManualJoin.addEventListener('click', () => {
+  const val = manualRoomInput.value.trim();
+  if (val) {
+    enterGuestMode(val);
+  }
+});
+
+btnLeaveRoom.addEventListener('click', leaveGuestMode);
+
+btnSendContact.addEventListener('click', () => {
+  const original = btnSendContact.textContent;
+  btnSendContact.textContent = 'Sent!';
+  btnSendContact.disabled = true;
+
+  setTimeout(() => {
+    btnSendContact.textContent = original;
+    btnSendContact.disabled = false;
+  }, 1000);
+});
+
+const urlParams = new URLSearchParams(window.location.search);
+const initialRoom = urlParams.get('room');
+if (initialRoom) {
+  enterGuestMode(initialRoom);
+}
+
 render();
