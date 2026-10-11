@@ -19,7 +19,8 @@
 
     <article id="profile-card">
       <div id="guest-banner" style="display: none; margin-bottom: 1rem;">
-        <ins>Connected to room: <strong id="guest-room-id"></strong></ins>
+        <ins>Room: <strong id="guest-room-id"></strong></ins>
+        <div><small id="guest-status">Connecting to host...</small></div>
       </div>
 
       <form id="profile-form" novalidate>
@@ -75,6 +76,13 @@
       </div>
 
       <p style="margin-top: 1rem;"><small id="host-link-text"></small></p>
+
+      <div id="host-peers-section" style="margin-top: 1rem;">
+        <p><small>Connected (<span id="connected-count">0</span>):</small></p>
+        <div id="connected-peers-list" style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; min-height: 2rem;"></div>
+      </div>
+
+      <button type="button" id="btn-bump" style="margin-top: 1rem;" disabled>Bump Contacts</button>
 
       <hr>
 
