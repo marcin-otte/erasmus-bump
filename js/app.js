@@ -264,6 +264,7 @@ const btnManualJoin = document.getElementById('btn-manual-join');
 
 const guestBanner = document.getElementById('guest-banner');
 const guestRoomId = document.getElementById('guest-room-id');
+const guestStatus = document.getElementById('guest-status');
 const guestActions = document.getElementById('guest-actions');
 const btnSendContact = document.getElementById('btn-send-contact');
 const btnLeaveRoom = document.getElementById('btn-leave-room');
@@ -273,11 +274,46 @@ const hostRoomId = document.getElementById('host-room-id');
 const hostLinkText = document.getElementById('host-link-text');
 const qrCodeContainer = document.getElementById('qrcode');
 const btnCloseRoom = document.getElementById('btn-close-room');
+const connectedCount = document.getElementById('connected-count');
+const connectedPeersList = document.getElementById('connected-peers-list');
+const btnBump = document.getElementById('btn-bump');
 
 let currentRoomId = null;
+let peerInstance = null;
+let hostConnection = null;
+const connectedPeers = new Map();
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
 
 function generateRoomId() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+function getRoomPeerId(roomId) {
+  return `peerbump-${roomId.toLowerCase()}`;
+}
+
+function updateHostPeersList() {
+  const count = connectedPeers.size;
+  connectedCount.textContent = count;
+  btnBump.disabled = count === 0;
+  btnBump.textContent = count === 0 ? 'Bump Contacts' : `Bump (${count})`;
+
+  connectedPeersList.innerHTML = Array.from(connectedPeers.values())
+    .map(p => `
+      <span style="background: var(--pico-card-background-color, #2b303c); border: 1px solid var(--pico-muted-border-color); padding: 0.2rem 0.6rem; border-radius: 1rem;">
+        <small>${escapeHtml(p.name)}</small>
+      </span>
+    `)
+    .join('');
 }
 
 function enterHostMode(roomId) {
@@ -301,9 +337,52 @@ function enterHostMode(roomId) {
     colorLight: '#ffffff',
     correctLevel: QRCode.CorrectLevel.M,
   });
+
+  if (peerInstance) {
+    peerInstance.destroy();
+  }
+
+  connectedPeers.clear();
+  updateHostPeersList();
+
+  const peerId = getRoomPeerId(currentRoomId);
+  peerInstance = new Peer(peerId);
+
+  peerInstance.on('connection', conn => {
+    conn.on('data', data => {
+      if (data?.type === 'JOIN') {
+        connectedPeers.set(conn.peer, { conn, name: data.name || 'Anonymous' });
+        updateHostPeersList();
+        conn.send({ type: 'WELCOME', room: currentRoomId });
+      }
+    });
+
+    conn.on('close', () => {
+      connectedPeers.delete(conn.peer);
+      updateHostPeersList();
+    });
+
+    conn.on('error', () => {
+      connectedPeers.delete(conn.peer);
+      updateHostPeersList();
+    });
+  });
+
+  peerInstance.on('error', err => {
+    if (err.type === 'unavailable-id') {
+      enterHostMode(generateRoomId());
+    }
+  });
 }
 
 function closeHostMode() {
+  if (peerInstance) {
+    peerInstance.destroy();
+    peerInstance = null;
+  }
+  connectedPeers.clear();
+  updateHostPeersList();
+
   currentRoomId = null;
   hostView.style.display = 'none';
   profileCard.style.display = 'block';
@@ -316,15 +395,74 @@ function enterGuestMode(roomId) {
   hostView.style.display = 'none';
   guestBanner.style.display = 'block';
   guestRoomId.textContent = currentRoomId;
+  guestRoomId.style.color = '';
+  guestStatus.textContent = 'Connecting to host...';
+  guestStatus.style.color = '';
   roomActions.style.display = 'none';
   guestActions.style.display = 'block';
 
   const newUrl = `${window.location.origin}${window.location.pathname}?room=${currentRoomId}`;
   window.history.replaceState({}, '', newUrl);
+
+  if (peerInstance) {
+    peerInstance.destroy();
+  }
+
+  peerInstance = new Peer();
+
+  peerInstance.on('open', () => {
+    const targetHostId = getRoomPeerId(currentRoomId);
+    hostConnection = peerInstance.connect(targetHostId, { reliable: true });
+
+    hostConnection.on('open', () => {
+      const myName = nameInput.value.trim() || 'Anonymous';
+      hostConnection.send({ type: 'JOIN', name: myName });
+      guestStatus.textContent = 'Connected to host!';
+      guestStatus.style.color = 'var(--pico-color-green-500, #43a047)';
+      guestRoomId.style.color = '';
+    });
+
+    hostConnection.on('data', data => {
+      if (data?.type === 'WELCOME') {
+        guestStatus.textContent = 'Connected to host! Ready.';
+        guestStatus.style.color = 'var(--pico-color-green-500, #43a047)';
+        guestRoomId.style.color = '';
+      }
+    });
+
+    hostConnection.on('close', () => {
+      guestStatus.textContent = 'Disconnected from host.';
+      guestStatus.style.color = 'var(--pico-color-red-500, #e53935)';
+      guestRoomId.style.color = 'var(--pico-color-red-500, #e53935)';
+    });
+
+    hostConnection.on('error', () => {
+      guestStatus.textContent = 'Connection error.';
+      guestStatus.style.color = 'var(--pico-color-red-500, #e53935)';
+      guestRoomId.style.color = 'var(--pico-color-red-500, #e53935)';
+    });
+  });
+
+  peerInstance.on('error', () => {
+    guestStatus.textContent = 'Could not connect to host.';
+    guestStatus.style.color = 'var(--pico-color-red-500, #e53935)';
+    guestRoomId.style.color = 'var(--pico-color-red-500, #e53935)';
+  });
 }
 
 function leaveGuestMode() {
+  if (hostConnection) {
+    hostConnection.close();
+    hostConnection = null;
+  }
+  if (peerInstance) {
+    peerInstance.destroy();
+    peerInstance = null;
+  }
+
   currentRoomId = null;
+  guestRoomId.style.color = '';
+  guestStatus.style.color = '';
   guestBanner.style.display = 'none';
   guestActions.style.display = 'none';
   roomActions.style.display = 'block';
