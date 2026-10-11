@@ -263,6 +263,7 @@ const manualRoomInput = document.getElementById('manual-room-input');
 const btnManualJoin = document.getElementById('btn-manual-join');
 
 const guestBanner = document.getElementById('guest-banner');
+const guestRoomLabel = document.getElementById('guest-room-label');
 const guestRoomId = document.getElementById('guest-room-id');
 const guestStatus = document.getElementById('guest-status');
 const guestActions = document.getElementById('guest-actions');
@@ -277,6 +278,11 @@ const btnCloseRoom = document.getElementById('btn-close-room');
 const connectedCount = document.getElementById('connected-count');
 const connectedPeersList = document.getElementById('connected-peers-list');
 const btnBump = document.getElementById('btn-bump');
+
+const resultsView = document.getElementById('results-view');
+const resultsCount = document.getElementById('results-count');
+const resultsList = document.getElementById('results-list');
+const btnResultsDone = document.getElementById('btn-results-done');
 
 let currentRoomId = null;
 let peerInstance = null;
@@ -309,8 +315,8 @@ function updateHostPeersList() {
 
   connectedPeersList.innerHTML = Array.from(connectedPeers.values())
     .map(p => `
-      <span style="background: var(--pico-card-background-color, #2b303c); border: 1px solid var(--pico-muted-border-color); padding: 0.2rem 0.6rem; border-radius: 1rem;">
-        <small>${escapeHtml(p.name)}</small>
+      <span style="background: var(--pico-card-background-color, #2b303c); border: 1px solid ${p.hasSent ? 'var(--pico-primary)' : 'var(--pico-muted-border-color)'}; padding: 0.2rem 0.6rem; border-radius: 1rem;">
+        <small>${p.hasSent ? '✓ ' : ''}${escapeHtml(p.name)}</small>
       </span>
     `)
     .join('');
@@ -351,9 +357,16 @@ function enterHostMode(roomId) {
   peerInstance.on('connection', conn => {
     conn.on('data', data => {
       if (data?.type === 'JOIN') {
-        connectedPeers.set(conn.peer, { conn, name: data.name || 'Anonymous' });
+        connectedPeers.set(conn.peer, { conn, name: data.name || 'Anonymous', fields: [], hasSent: false });
         updateHostPeersList();
         conn.send({ type: 'WELCOME', room: currentRoomId });
+      } else if (data?.type === 'CONTACT_PAYLOAD') {
+        const peerData = connectedPeers.get(conn.peer) || { conn };
+        peerData.name = data.name || peerData.name || 'Anonymous';
+        peerData.fields = data.fields || [];
+        peerData.hasSent = true;
+        connectedPeers.set(conn.peer, peerData);
+        updateHostPeersList();
       }
     });
 
@@ -394,12 +407,15 @@ function enterGuestMode(roomId) {
   profileCard.style.display = 'block';
   hostView.style.display = 'none';
   guestBanner.style.display = 'block';
+  guestRoomLabel.style.color = '';
   guestRoomId.textContent = currentRoomId;
   guestRoomId.style.color = '';
   guestStatus.textContent = 'Connecting to host...';
   guestStatus.style.color = '';
   roomActions.style.display = 'none';
   guestActions.style.display = 'block';
+  btnSendContact.textContent = 'Send Contact';
+  btnSendContact.disabled = false;
 
   const newUrl = `${window.location.origin}${window.location.pathname}?room=${currentRoomId}`;
   window.history.replaceState({}, '', newUrl);
@@ -419,6 +435,7 @@ function enterGuestMode(roomId) {
       hostConnection.send({ type: 'JOIN', name: myName });
       guestStatus.textContent = 'Connected to host!';
       guestStatus.style.color = 'var(--pico-color-green-500, #43a047)';
+      guestRoomLabel.style.color = '';
       guestRoomId.style.color = '';
     });
 
@@ -426,19 +443,24 @@ function enterGuestMode(roomId) {
       if (data?.type === 'WELCOME') {
         guestStatus.textContent = 'Connected to host! Ready.';
         guestStatus.style.color = 'var(--pico-color-green-500, #43a047)';
+        guestRoomLabel.style.color = '';
         guestRoomId.style.color = '';
+      } else if (data?.type === 'BUMP_RESULTS') {
+        showResults(data.contacts || []);
       }
     });
 
     hostConnection.on('close', () => {
       guestStatus.textContent = 'Disconnected from host.';
       guestStatus.style.color = 'var(--pico-color-red-500, #e53935)';
+      guestRoomLabel.style.color = 'var(--pico-color-red-500, #e53935)';
       guestRoomId.style.color = 'var(--pico-color-red-500, #e53935)';
     });
 
     hostConnection.on('error', () => {
       guestStatus.textContent = 'Connection error.';
       guestStatus.style.color = 'var(--pico-color-red-500, #e53935)';
+      guestRoomLabel.style.color = 'var(--pico-color-red-500, #e53935)';
       guestRoomId.style.color = 'var(--pico-color-red-500, #e53935)';
     });
   });
@@ -446,6 +468,7 @@ function enterGuestMode(roomId) {
   peerInstance.on('error', () => {
     guestStatus.textContent = 'Could not connect to host.';
     guestStatus.style.color = 'var(--pico-color-red-500, #e53935)';
+    guestRoomLabel.style.color = 'var(--pico-color-red-500, #e53935)';
     guestRoomId.style.color = 'var(--pico-color-red-500, #e53935)';
   });
 }
@@ -461,6 +484,8 @@ function leaveGuestMode() {
   }
 
   currentRoomId = null;
+  profileCard.style.display = 'block';
+  guestRoomLabel.style.color = '';
   guestRoomId.style.color = '';
   guestStatus.style.color = '';
   guestBanner.style.display = 'none';
@@ -469,6 +494,37 @@ function leaveGuestMode() {
 
   const cleanUrl = `${window.location.origin}${window.location.pathname}`;
   window.history.replaceState({}, '', cleanUrl);
+}
+
+function showResults(contacts) {
+  profileCard.style.display = 'none';
+  hostView.style.display = 'none';
+  resultsView.style.display = 'block';
+
+  resultsCount.textContent = contacts.length;
+  resultsList.innerHTML = contacts
+    .map(c => `
+      <div style="padding: 0.75rem 0; border-bottom: 1px solid var(--pico-muted-border-color);">
+        <h4 style="margin-bottom: 0.25rem;">${escapeHtml(c.name)}</h4>
+        ${c.fields && c.fields.length
+          ? c.fields
+              .map(f => {
+                const meta = getFieldMeta(f.id);
+                const icon = f.isCustom
+                  ? '<i class="bi bi-tag" style="margin-right: 0.4rem;"></i>'
+                  : `<i class="${meta.icon}" style="margin-right: 0.4rem;"></i>`;
+                const label = f.isCustom ? (f.label || 'Custom') : meta.label;
+                return `<p style="margin-bottom: 0.2rem;"><small>${icon}<strong>${escapeHtml(label)}:</strong> ${escapeHtml(f.value)}</small></p>`;
+              })
+              .join('')
+          : '<p><small>No details shared.</small></p>'}
+      </div>
+    `)
+    .join('');
+
+  try {
+    localStorage.setItem('peerbump_last_contacts', JSON.stringify(contacts));
+  } catch {}
 }
 
 btnHost.addEventListener('click', () => enterHostMode());
@@ -488,14 +544,45 @@ btnManualJoin.addEventListener('click', () => {
 btnLeaveRoom.addEventListener('click', leaveGuestMode);
 
 btnSendContact.addEventListener('click', () => {
-  const original = btnSendContact.textContent;
+  if (!hostConnection || !hostConnection.open) return;
+
+  const payload = {
+    type: 'CONTACT_PAYLOAD',
+    name: nameInput.value.trim() || 'Anonymous',
+    fields: activeFields.filter(f => f.value.trim() !== ''),
+  };
+
+  hostConnection.send(payload);
   btnSendContact.textContent = 'Sent!';
   btnSendContact.disabled = true;
+  guestStatus.textContent = 'Contact sent! Waiting for host to bump...';
+});
 
-  setTimeout(() => {
-    btnSendContact.textContent = original;
-    btnSendContact.disabled = false;
-  }, 1000);
+btnBump.addEventListener('click', () => {
+  const hostPayload = {
+    name: nameInput.value.trim() || 'Host',
+    fields: activeFields.filter(f => f.value.trim() !== ''),
+  };
+
+  const guestContacts = Array.from(connectedPeers.values())
+    .filter(p => p.hasSent)
+    .map(p => ({ name: p.name, fields: p.fields }));
+
+  const allContacts = [hostPayload, ...guestContacts];
+
+  for (const { conn } of connectedPeers.values()) {
+    if (conn && conn.open) {
+      conn.send({ type: 'BUMP_RESULTS', contacts: allContacts });
+    }
+  }
+
+  showResults(allContacts);
+});
+
+btnResultsDone.addEventListener('click', () => {
+  resultsView.style.display = 'none';
+  leaveGuestMode();
+  closeHostMode();
 });
 
 const urlParams = new URLSearchParams(window.location.search);
