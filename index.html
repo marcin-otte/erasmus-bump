@@ -3,18 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Erasmus Bump</title>
-
-  <!-- Pico.css -->
+  <title>PeerBump</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-
-  <!-- PeerJS -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-
-  <!-- qrcode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-  <!-- Custom Styles & Scripts -->
   <link rel="stylesheet" href="css/style.css">
   <script src="js/app.js" defer></script>
 </head>
@@ -25,40 +17,22 @@
     </header>
 
     <article>
-      <header>
-        <h2>Your Profile</h2>
-        <p><small>Information you share when connecting with someone.</small></p>
-      </header>
-
       <form id="profile-form">
         <label for="name">
           Name <span aria-hidden="true" style="color: var(--pico-primary);">*</span>
           <input type="text" id="name" name="name" placeholder="Your name" autocomplete="name" required>
         </label>
 
-        <hr>
+        <div id="active-fields"></div>
 
-        <fieldset>
-          <legend><small>Select details to share:</small></legend>
+        <select id="field-selector">
+          <option value="" disabled selected>+ Add field...</option>
+        </select>
 
-          <label>
-            <input type="checkbox" name="share_phone" checked>
-            Phone / WhatsApp
-          </label>
-          <input type="tel" id="phone" name="phone" placeholder="+48 123 456 789" autocomplete="tel">
-
-          <label>
-            <input type="checkbox" name="share_instagram" checked>
-            Instagram
-          </label>
-          <input type="text" id="instagram" name="instagram" placeholder="@username" autocomplete="off">
-
-          <label>
-            <input type="checkbox" name="share_email" checked>
-            Email
-          </label>
-          <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email">
-        </fieldset>
+        <details id="saved-section">
+          <summary>Not shared</summary>
+          <div id="inactive-fields"></div>
+        </details>
 
         <hr>
 
