@@ -20,7 +20,51 @@
 </head>
 <body>
   <main class="container">
-    <h1>Erasmus Bump</h1>
+    <header>
+      <h1>PeerBump</h1>
+    </header>
+
+    <article>
+      <header>
+        <h2>Your Profile</h2>
+        <p><small>Information you share when connecting with someone.</small></p>
+      </header>
+
+      <form id="profile-form">
+        <label for="name">
+          Name <span aria-hidden="true" style="color: var(--pico-primary);">*</span>
+          <input type="text" id="name" name="name" placeholder="Your name" autocomplete="name" required>
+        </label>
+
+        <hr>
+
+        <fieldset>
+          <legend><small>Select details to share:</small></legend>
+
+          <label>
+            <input type="checkbox" name="share_phone" checked>
+            Phone / WhatsApp
+          </label>
+          <input type="tel" id="phone" name="phone" placeholder="+48 123 456 789" autocomplete="tel">
+
+          <label>
+            <input type="checkbox" name="share_instagram" checked>
+            Instagram
+          </label>
+          <input type="text" id="instagram" name="instagram" placeholder="@username" autocomplete="off">
+
+          <label>
+            <input type="checkbox" name="share_email" checked>
+            Email
+          </label>
+          <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email">
+        </fieldset>
+
+        <hr>
+
+        <button type="submit">Save Profile</button>
+      </form>
+    </article>
   </main>
 </body>
 </html>
